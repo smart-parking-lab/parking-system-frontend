@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu, Button, theme } from 'antd';
-import { 
-  DashboardOutlined, 
-  VideoCameraOutlined, 
-  LineChartOutlined, 
-  LogoutOutlined 
+import {
+  DashboardOutlined,
+  VideoCameraOutlined,
+  LineChartOutlined,
+  LogoutOutlined,
 } from '@ant-design/icons';
-import { supabase } from '../services/supabaseClient';
+
 
 const { Header, Sider, Content } = Layout;
 
@@ -69,9 +69,10 @@ const AdminLayout: React.FC = () => {
               window.location.href = '/admin/login';
               return;
             }
-            await supabase.auth.signOut();
-            // AuthContext sẽ tự động bắt được event này và đá user về trang Login!
+            localStorage.removeItem('access_token');
+            window.location.href = '/admin/login';
           }}
+
           >
             Đăng xuất
           </Button>

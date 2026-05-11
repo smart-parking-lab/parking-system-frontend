@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Form, Input, Button, Card, Typography } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { toast } from 'react-toastify';
-import { supabase } from '../../services/supabaseClient';
 
 const { Title } = Typography;
+
 
 const isMockMode = import.meta.env.VITE_USE_MOCK_DATA === 'true';
 
@@ -32,24 +32,30 @@ const LoginPage: React.FC = () => {
       return;
     }
 
-    // Gọi API của Supabase để xác thực
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    // Gọi backend login thay Supabase
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (error) {
-      // Hiển thị thông báo lỗi bằng react-toastify
-      toast.error('Đăng nhập thất bại: Sai email hoặc mật khẩu!');
-    } else {
+      if (!res.ok) {
+        toast.error('Đăng nhập thất bại: Sai email hoặc mật khẩu!');
+        setLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+      if (data?.access_token) localStorage.setItem('access_token', data.access_token);
+
       toast.success('Đăng nhập thành công!');
-      // 💡 Lưu ý sự kỳ diệu ở đây:
-      // Em không cần dùng lệnh navigate('/admin/slot') để chuyển trang.
-      // Vì AuthContext sẽ tự động bắt được sự kiện đăng nhập thành công,
-      // sau đó Guard <AdminRejectedRoute /> sẽ tự động đá em vào trang Dashboard!
+      window.location.href = '/admin/slot';
+    } catch {
+      toast.error('Đăng nhập thất bại!');
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (
