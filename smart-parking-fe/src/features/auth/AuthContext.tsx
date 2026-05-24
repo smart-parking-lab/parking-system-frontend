@@ -8,7 +8,6 @@ interface AuthContextType {
 // Khởi tạo Context mặc định là chưa đăng nhập
 const AuthContext = createContext<AuthContextType>({ isAuthenticated: false });
 
-// Provider để bọc ứng dụng
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -50,3 +49,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 // Custom hook để các component khác lấy dữ liệu
 export const useAuth = () => useContext(AuthContext);
+

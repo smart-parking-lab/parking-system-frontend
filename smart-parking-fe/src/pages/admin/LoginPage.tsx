@@ -8,6 +8,7 @@ import type { ApiErrorResponse } from '../../types/api.type';
 
 const { Title } = Typography;
 
+
 const isMockMode = import.meta.env.VITE_USE_MOCK_DATA === 'true';
 
 const LoginPage: React.FC = () => {
