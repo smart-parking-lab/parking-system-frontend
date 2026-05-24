@@ -16,20 +16,27 @@ import { useAuth } from '../features/auth/AuthContext';
 
 // --- 🛡️ GUARDS ---
 
-// 1. Component bảo vệ: Yêu cầu đăng nhập để vào trang Admin
+// 1. Component bảo vệ: Bắt buộc PHẢI ĐĂNG NHẬP mới được vào (Dùng cho Dashboard)
 const AdminProtectedRoute = () => {
-  const { session } = useAuth();
-  // Nếu có session (đã login) thì cho vào Outlet, ngược lại đá văng ra Login
-  return session ? <Outlet /> : <Navigate to="/admin/login" replace />;
+  const { isAuthenticated } = useAuth();
+  
+  // Nếu CHƯA đăng nhập -> Đá về Login
+  if (!isAuthenticated) return <Navigate to="/admin/login" />;
+  
+  // Nếu ĐÃ đăng nhập -> Mở cửa cho đi tiếp
+  return <Outlet />; 
 };
 
-// 2. Component từ chối: Đã đăng nhập Admin rồi thì không cho vào trang Login nữa
+// 2. Component từ chối: Nếu ĐÃ ĐĂNG NHẬP rồi thì cấm vào (Dùng cho trang Login)
 const AdminRejectedRoute = () => {
-  const { session } = useAuth();
-  // Nếu ĐÃ login thì không cho vào trang Login nữa, đá vào Dashboard
-  return !session ? <Outlet /> : <Navigate to="/admin/slot" replace />;
+  const { isAuthenticated } = useAuth();
+  
+  // Nếu ĐÃ đăng nhập -> Đá thẳng vào Dashboard (không cho nhìn thấy form login nữa)
+  if (isAuthenticated) return <Navigate to="/admin/slot" />;
+  
+  // Nếu CHƯA đăng nhập -> Mở cửa cho vào form login
+  return <Outlet />; 
 };
-
 // --- 🗺️ ROUTES CONFIG ---
 
 export default function useRouteElements() {

@@ -17,7 +17,7 @@ const HomePage: React.FC = () => {
       console.log("response", response);
       setSlots(response.data)
     } catch (error) {
-      console.log(error)
+      console.log("err", error)
     }finally{
       setLoading(false)
     }
@@ -31,7 +31,7 @@ const HomePage: React.FC = () => {
 
 
   // Tính toán số lượng chỗ trống
-  const availableCount = slots.filter(s => s.status === 'available').length;
+  const availableCount = slots.filter(s => s.status === 'empty').length;
   const totalCount = slots.length;
 
   

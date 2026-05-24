@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Tag, Card, Typography, Row, Col, Statistic, DatePicker } from 'antd';
+import { Table, Tag, Card, Typography, Row, Col, Statistic, DatePicker, message } from 'antd';
 import { DollarOutlined, CarOutlined, CreditCardOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { AdminService } from '../../services/admin.service';
+import type { AxiosError } from 'axios';
+import type { ApiErrorResponse } from '../../types/api.type';
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -11,45 +14,33 @@ const RevenuePage: React.FC = () => {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [dateRange, setDateRange] = useState<any>(null);
 
-  // 1. Mock Data: Giả lập dữ liệu hóa đơn từ bảng invoices
-  const fetchMockInvoices = () => {
+
+  
+
+  const fetchRealInvoices = async () => {
     setLoading(true);
-    setTimeout(() => {
-      setInvoices([
-        {
-          id: 'INV-001',
-          plate_number: '59A-123.45', // Thực tế sẽ JOIN từ bảng parking_sessions
-          duration_minutes: 120,
-          amount: 15000,
-          payment_method: 'vnpay', // tiền mặt, vnpay, momo
-          status: 'paid',
-          paid_at: '2026-03-16T10:05:00Z',
-        },
-        {
-          id: 'INV-002',
-          plate_number: '30F-999.99',
-          duration_minutes: 800, // Đỗ qua đêm
-          amount: 50000,
-          payment_method: 'cash',
-          status: 'paid',
-          paid_at: '2026-03-16T07:20:00Z',
-        },
-        {
-          id: 'INV-003',
-          plate_number: '43C-567.89',
-          duration_minutes: 45,
-          amount: 5000,
-          payment_method: 'momo',
-          status: 'paid',
-          paid_at: '2026-03-16T11:30:00Z',
-        }
-      ]);
+    try {
+      // Giả sử em đã viết hàm getRevenue() trong AdminService
+      const response = await AdminService.getRevenue(); 
+      
+      // Data BE trả về có dạng { total_revenue: ..., list_invoices: [...] }
+      const data = response.data;
+      
+      // Lấy danh sách bỏ vào bảng
+      setInvoices(data.list_invoices);
+      
+
+    } catch (error) {
+      const err = error as AxiosError<ApiErrorResponse>
+      console.log("Err", err);
+      message.error(err.response?.data.detail)
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   useEffect(() => {
-    fetchMockInvoices();
+    fetchRealInvoices(); // Gọi hàm thật
   }, []);
 
  // Lọc hóa đơn dựa trên khoảng thời gian được chọn

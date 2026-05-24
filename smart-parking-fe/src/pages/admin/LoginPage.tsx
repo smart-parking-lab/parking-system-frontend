@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography } from 'antd';
+import { Form, Input, Button, Card, Typography, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { toast } from 'react-toastify';
-import { supabase } from '../../services/supabaseClient';
+import { AdminService } from '../../services/admin.service';
+import type { AxiosError } from 'axios';
+import type { ApiErrorResponse } from '../../types/api.type';
 
 const { Title } = Typography;
 
@@ -10,7 +12,6 @@ const isMockMode = import.meta.env.VITE_USE_MOCK_DATA === 'true';
 
 const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
-
   // Hàm xử lý khi người dùng bấm nút Submit
   const onFinish = async (values: any) => {
     setLoading(true);
@@ -32,24 +33,27 @@ const LoginPage: React.FC = () => {
       return;
     }
 
-    // Gọi API của Supabase để xác thực
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const res = await AdminService.login(email, password);
+      console.log("Accesstoken", res.data.access_token)
+       console.log("Accesstoken", res.data.refresh_token)
+      localStorage.setItem("access_token", res.data.access_token);
+      localStorage.setItem(
+        "refresh_token",
+        res.data.refresh_token
+      );
+      window.location.href = '/admin/slot';
+    } catch (error) {
+      const err = error as AxiosError<ApiErrorResponse>
+      const errorMessage =
+      err.response?.data?.detail || "Có lỗi xảy ra";
 
-    if (error) {
-      // Hiển thị thông báo lỗi bằng react-toastify
-      toast.error('Đăng nhập thất bại: Sai email hoặc mật khẩu!');
-    } else {
-      toast.success('Đăng nhập thành công!');
-      // 💡 Lưu ý sự kỳ diệu ở đây:
-      // Em không cần dùng lệnh navigate('/admin/slot') để chuyển trang.
-      // Vì AuthContext sẽ tự động bắt được sự kiện đăng nhập thành công,
-      // sau đó Guard <AdminRejectedRoute /> sẽ tự động đá em vào trang Dashboard!
+      message.error(errorMessage);
+    }finally{
+      setLoading(false)
     }
     
-    setLoading(false);
+    
   };
 
   return (

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Tag, Card, Typography, Space, Button } from 'antd';
+import { Table, Tag, Card, Typography, Space, Button, message } from 'antd';
 import { SyncOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import type { AxiosError } from 'axios';
+import type { ApiErrorResponse } from '../../types/api.type';
+import { AdminService } from '../../services/admin.service';
 // import { supabase } from '../../services/supabaseClient'; // Tạm comment chờ nối API thật
 
 const { Title } = Typography;
@@ -24,8 +27,20 @@ const DashboardPage: React.FC = () => {
     }, 800); // Giả lập mạng chậm 0.8s
   };
 
+  const fetchApiSlotAdmin = async () =>{ 
+    try {
+      const res = await AdminService.getParkingSlotAdmin();
+      console.log("res", res);
+      setSlots(res.data);
+    } catch (error) {
+      const err = error as AxiosError<ApiErrorResponse>
+      console.log("Err", err.response)
+      message.error(err.response?.data.detail)
+    }
+  }
+
   useEffect(() => {
-    fetchDummyData();
+    fetchApiSlotAdmin();
   }, []);
 
   // Định nghĩa các cột cho bảng Ant Design
@@ -86,7 +101,7 @@ const DashboardPage: React.FC = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
         <Title level={4} style={{ margin: 0 }}>Quản lý trạng thái bãi đỗ</Title>
-        <Button type="primary" icon={<SyncOutlined />} onClick={fetchDummyData}>
+        <Button type="primary" icon={<SyncOutlined />} onClick={fetchApiSlotAdmin}>
           Làm mới
         </Button>
       </div>
