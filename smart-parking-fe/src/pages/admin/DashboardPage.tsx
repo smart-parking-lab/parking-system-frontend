@@ -62,23 +62,27 @@ const DashboardPage: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => {
-        // Render màu sắc Tag dựa theo trạng thái
         let color = 'green';
         let text = 'Trống';
         if (status === 'occupied') { color = 'red'; text = 'Có Xe'; }
-        if (status === 'maintenance') { color = 'default'; text = 'Bảo Trì'; }
+        // Lưu ý: DB em đang trả về 'empty', hãy sửa lại ở đây
+        if (status === 'empty') { color = 'green'; text = 'Trống'; } 
         return <Tag color={color} className="uppercase px-4 py-1">{text}</Tag>;
       },
     },
     {
       title: 'Trạng Thái Cảm Biến',
-      dataIndex: 'sensor_status',
+      dataIndex: 'sensors', // Trỏ vào object con
       key: 'sensor_status',
-      render: (sensor_status: string) => {
-        if (sensor_status === 'online') {
+      render: (sensors: any) => {
+        // Kiểm tra nếu không có sensor hoặc status bị null
+        if (!sensors) return <Tag color="default">Không có cảm biến</Tag>;
+        
+        const status = sensors.status;
+        if (status === 'online') {
           return <Tag icon={<CheckCircleOutlined />} color="success">Đang hoạt động</Tag>;
         }
-        if (sensor_status === 'error') {
+        if (status === 'error') {
           return <Tag icon={<CloseCircleOutlined />} color="error">Lỗi phần cứng</Tag>;
         }
         return <Tag icon={<SyncOutlined spin />} color="warning">Mất kết nối</Tag>;
