@@ -1,39 +1,68 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Typography, Row, Col, Badge, Statistic, message } from 'antd';
+import { Card, Typography, Row, Col, Badge, Statistic } from 'antd';
 import { CarOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { homeService } from '../../services/home.service';
 import type { ParkingSLots } from '../../types/parking.type';
+
+// 1. IMPORT SUPABASE CLIENT VÀO ĐÂY
+import { supabase } from '../../services/supabaseClient'; 
 
 const { Title, Text } = Typography;
 
 const HomePage: React.FC = () => {
   const [loading, setLoading] = useState(false);
-  const [slots, setSlots] = useState< ParkingSLots[]>([]);
+  const [slots, setSlots] = useState<ParkingSLots[]>([]);
 
+  // Hàm gọi API lấy dữ liệu lần đầu
   const fetchMockSlots = async () => {
     setLoading(true);
     try {
       const response = await homeService.getAllParkingSlot();
-      console.log("response", response);
-      setSlots(response.data)
+      setSlots(response.data);
     } catch (error) {
-      console.log("err", error)
-    }finally{
-      setLoading(false)
+      console.log("err", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-
-
   useEffect(() => {
+    // 1. Tải danh sách ô đỗ ban đầu qua API
     fetchMockSlots();
+
+    // 2. KÍCH HOẠT SUPABASE REALTIME (WEBSOCKET)
+    const subscription = supabase
+      .channel('public-slots-channel') // Tên kênh (tùy ý)
+      .on(
+        'postgres_changes',
+        { 
+          event: 'UPDATE', // Chỉ lắng nghe sự kiện UPDATE
+          schema: 'public', 
+          table: 'parking_slots' // Tên bảng trong DB Supabase của em
+        },
+        (payload) => {
+          console.log('🔄 Dữ liệu Realtime nhận được:', payload);
+          // Cập nhật ngay lập tức trạng thái ô đỗ trong state React
+          setSlots((prevSlots) =>
+            prevSlots.map((slot) =>
+              slot.id === payload.new.id
+                ? { ...slot, status: payload.new.status } // Đè status mới vào
+                : slot
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    // 3. DỌN DẸP (CLEANUP): Ngắt kết nối WebSocket khi người dùng rời khỏi trang
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
-
   // Tính toán số lượng chỗ trống
-  const availableCount = slots.filter(s => s.status === 'empty').length;
+  const availableCount = slots.filter(s => s.status === 'empty' || s.status === 'available').length;
   const totalCount = slots.length;
-
   
   // Hàm render giao diện từng ô đỗ xe
   const renderSlot = (slot: any) => {
@@ -42,7 +71,8 @@ const HomePage: React.FC = () => {
     let textColor = '#000';
     let icon = null;
 
-    if (slot.status === 'available') {
+    // Lưu ý: Đảm bảo điều kiện này khớp với chữ trong DB của em ('empty' hoặc 'available')
+    if (slot.status === 'available' || slot.status === 'empty') {
       bgColor = '#f6ffed'; // Xanh nhạt
       borderColor = '#b7eb8f'; // Viền xanh lá
       textColor = '#389e0d';
@@ -95,7 +125,7 @@ const HomePage: React.FC = () => {
               suffix={`/ ${totalCount}`}
               valueStyle={{ color: '#3f8600', fontSize: '48px', fontWeight: '900' }}
             />
-            <Text type="secondary">Cập nhật theo thời gian thực</Text>
+            <Text type="secondary">Cập nhật theo thời gian thực (WebSocket)</Text>
           </Card>
         </Col>
       </Row>
