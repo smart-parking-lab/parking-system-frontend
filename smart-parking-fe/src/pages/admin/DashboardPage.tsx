@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Tag, Card, Typography, Space, Button, message } from 'antd';
+import { Table, Tag, Card, Typography, Button, message } from 'antd';
 import { SyncOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import type { AxiosError } from 'axios';
 import type { ApiErrorResponse } from '../../types/api.type';
 import { AdminService } from '../../services/admin.service';
-// import { supabase } from '../../services/supabaseClient'; // Tạm comment chờ nối API thật
+import { supabase } from '../../services/supabaseClient'; // IMPORT SUPABASE
 
 const { Title } = Typography;
 
@@ -16,19 +16,44 @@ const DashboardPage: React.FC = () => {
     try {
       setLoading(true);
       const res = await AdminService.getParkingSlotAdmin();
-      console.log("res", res);
       setSlots(res.data);
     } catch (error) {
       const err = error as AxiosError<ApiErrorResponse>
-      console.log("Err", err.response)
       message.error(err.response?.data.detail)
-    }finally{
+    } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
+    // 1. Tải dữ liệu lần đầu
     fetchApiSlotAdmin();
+
+    // 2. Kích hoạt WebSocket lắng nghe cả 2 bảng: parking_slots và sensors
+    const subscription = supabase
+      .channel('admin-dashboard-channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'parking_slots' },
+        () => {
+          console.log('🔄 Bảng parking_slots thay đổi, đang tự động cập nhật...');
+          fetchApiSlotAdmin(); // Tự động lấy lại dữ liệu mới
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'sensors' },
+        () => {
+          console.log('🔄 Bảng sensors thay đổi, đang tự động cập nhật...');
+          fetchApiSlotAdmin();
+        }
+      )
+      .subscribe();
+
+    // 3. Dọn dẹp khi rời trang
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   // Định nghĩa các cột cho bảng Ant Design
@@ -43,7 +68,8 @@ const DashboardPage: React.FC = () => {
     {
       title: 'Khu Vực',
       dataIndex: 'slot_code',
-      key: 'slot_code', 
+      key: 'zone',
+      render: (text: string) => text.charAt(0), // Lấy chữ cái đầu (A hoặc B) làm khu vực
     },
     {
       title: 'Trạng Thái Ô Đỗ',
@@ -53,17 +79,15 @@ const DashboardPage: React.FC = () => {
         let color = 'green';
         let text = 'Trống';
         if (status === 'occupied') { color = 'red'; text = 'Có Xe'; }
-        // Lưu ý: DB em đang trả về 'empty', hãy sửa lại ở đây
         if (status === 'empty') { color = 'green'; text = 'Trống'; } 
         return <Tag color={color} className="uppercase px-4 py-1">{text}</Tag>;
       },
     },
     {
       title: 'Trạng Thái Cảm Biến',
-      dataIndex: 'sensors', // Trỏ vào object con
+      dataIndex: 'sensors',
       key: 'sensor_status',
       render: (sensors: any) => {
-        // Kiểm tra nếu không có sensor hoặc status bị null
         if (!sensors) return <Tag color="default">Không có cảm biến</Tag>;
         
         const status = sensors.status;
@@ -75,17 +99,6 @@ const DashboardPage: React.FC = () => {
         }
         return <Tag icon={<SyncOutlined spin />} color="warning">Mất kết nối</Tag>;
       },
-    },
-    {
-      title: 'Hành Động',
-      key: 'action',
-      render: (_:any, record: any) => (
-        <Space size="middle">
-          <Button type="link" onClick={() => alert(`Xem chi tiết ô ${record.slot_code}`)}>
-            Chi tiết
-          </Button>
-        </Space>
-      ),
     },
   ];
 

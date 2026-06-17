@@ -3,6 +3,7 @@ import { Table, Tag, Typography, Input, Card, Image } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { AdminService } from '../../services/admin.service';
 import type { ParkingSessions } from '../../types/parking.type';
+import { supabase } from '../../services/supabaseClient'; // IMPORT SUPABASE
 
 const { Title } = Typography;
 
@@ -11,7 +12,6 @@ const SessionsPage: React.FC = () => {
   const [sessions, setSessions] = useState<ParkingSessions[]>([]);
   const [searchText, setSearchText] = useState('');
 
-  // 1. Tạo Mock Data bám sát bảng parking_sessions
   const fetchMockSessions = async() => {
     try {
       setLoading(true);
@@ -19,24 +19,40 @@ const SessionsPage: React.FC = () => {
       setSessions(response.data);
     } catch (error) {
       console.log(error)
-    }finally{
+    } finally {
       setLoading(false)
     }
-    
   };
 
   useEffect(() => {
+    // 1. Tải danh sách lần đầu
     fetchMockSessions();
+
+    // 2. Kích hoạt WebSocket lắng nghe bảng parking_sessions
+    const subscription = supabase
+      .channel('admin-sessions-channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'parking_sessions' },
+        (payload) => {
+          console.log('🔄 Bảng parking_sessions thay đổi:', payload);
+          fetchMockSessions(); // Gọi lại API để load dòng lịch sử mới/cập nhật giờ ra
+        }
+      )
+      .subscribe();
+
+    // 3. Dọn dẹp
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
-  // Hàm format thời gian cho đẹp (VD: 16/03/2026, 08:30)
   const formatDateTime = (dateString: string | null) => {
     if (!dateString) return <span className="text-gray-400">Chưa có</span>;
     const date = new Date(dateString);
     return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  // 2. Định nghĩa các cột cho bảng
   const columns = [
     {
       title: 'Biển Số',
@@ -85,7 +101,6 @@ const SessionsPage: React.FC = () => {
     },
   ];
 
-  // Logic tìm kiếm cơ bản (Lọc theo biển số)
   const filteredSessions = sessions.filter(session => 
     session.plate_number.toLowerCase().includes(searchText.toLowerCase())
   );
