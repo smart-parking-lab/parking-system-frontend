@@ -12,23 +12,9 @@ const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [slots, setSlots] = useState<any[]>([]);
 
-  // Tạm thời dùng dữ liệu giả (Dummy Data) bám sát DB để dàn layout trước
-  // Dữ liệu này mix giữa bảng parking_slots và sensors
-  const fetchDummyData = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setSlots([
-        { id: '1', slot_code: 'A01', status: 'available', sensor_status: 'online', zone: 'A' },
-        { id: '2', slot_code: 'A02', status: 'occupied', sensor_status: 'online', zone: 'A' },
-        { id: '3', slot_code: 'B01', status: 'maintenance', sensor_status: 'offline', zone: 'B' },
-        { id: '4', slot_code: 'B02', status: 'available', sensor_status: 'error', zone: 'B' },
-      ]);
-      setLoading(false);
-    }, 800); // Giả lập mạng chậm 0.8s
-  };
-
   const fetchApiSlotAdmin = async () =>{ 
     try {
+      setLoading(true);
       const res = await AdminService.getParkingSlotAdmin();
       console.log("res", res);
       setSlots(res.data);
@@ -36,6 +22,8 @@ const DashboardPage: React.FC = () => {
       const err = error as AxiosError<ApiErrorResponse>
       console.log("Err", err.response)
       message.error(err.response?.data.detail)
+    }finally{
+      setLoading(false);
     }
   }
 
@@ -54,8 +42,8 @@ const DashboardPage: React.FC = () => {
     },
     {
       title: 'Khu Vực',
-      dataIndex: 'zone',
-      key: 'zone',
+      dataIndex: 'slot_code',
+      key: 'slot_code', 
     },
     {
       title: 'Trạng Thái Ô Đỗ',
